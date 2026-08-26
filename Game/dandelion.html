@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>In-Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: #000000; /* Black letterbox background */
+            overflow: hidden;
+        }
+
+        /* Fixed Internal Game Resolution Box */
+        .Frame {
+            position: absolute;
+            width: 1920px;
+            height: 1080px;
+            background-color: #e55420;
+            border: 4px solid #000; /* Black border around scaling canvas */
+            overflow: hidden;
+            transform-origin: center center;
+            box-sizing: border-box;
+        }
+
+        .L1Map, .L5Map, .Milwind, .Bg, .Cloud1, .Cloud2, .Cloud3, .Cloud4 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .Cloud1, .Cloud2, .Cloud3, .Cloud4 {
+            animation: clouds 3s linear infinite;
+        }
+        @keyframes clouds {
+            0%, 25% {
+                transform: translate(0, 0);
+            }
+            50%, 65% {
+                transform: translate(0px, 5px);
+            }
+            90%, 100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        .L1Map { z-index: -1; }
+        .L5Map { 
+            z-index: -5; 
+            object-fit: fill; 
+        }
+        .Fans { 
+            z-index: -6;
+            width: 130px;
+            position: absolute;
+            left: 853px;
+            top: 475px;
+            animation: spin 6s linear infinite ;
+        }
+        @keyframes spin {
+                0%{transform: rotate(0deg);}
+                100%{transform: rotate(360deg);}
+            }
+        .Milwind { z-index: -7; }
+        .Bg { z-index: -9; }
+        .Cloud1, .Cloud2, .Cloud3, .Cloud4 { z-index: -8; }
+
+        /* Sprite Character Styling */
+        .character {
+            position: absolute;
+            width: 350px;
+            height: 200px;
+            z-index: -3;
+            left: 0;
+            top: 0;
+            will-change: transform;
+        }
+
+        /* --- NPC STYLES & POSITIONS (Converted to px based on 1920x1080) --- */
+        .NPC {
+            position: absolute;
+            z-index: -3;
+            object-fit: contain;
+        }
+
+        .Dandelion {
+            left: 250px;
+            bottom: 184px;
+            z-index: -4;
+            width: 300px;
+        }
+
+        .Mole {
+            left: 1200px;
+            bottom: 147px;
+            z-index: -4;
+            width: 200px;
+        }
+
+        .Hole {
+            position: absolute;
+            z-index: -5;
+            width: 1850px;
+        }
+
+
+        .Iguana {
+            left: 1385px;
+            top: 140px;
+            z-index: 0;
+            width: 280px;
+        }
+
+        #debugCanvas {
+            display: none; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 4;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="Frame" id="mapFrame">
+        <!-- Animated Player Character -->
+        <img class="character" id="player" src="Images/Asset/Part 2/User/User1 L3.png" alt="Player" />
+        
+        <!-- Background Elements -->
+        <img class="Bg" src="Images/Asset/Part 2/Bg L9.png"/>
+        <img class="Cloud1" src="Images/Asset/Part 2/Cloud L8.png"/>
+        <img class="Cloud2" src="Images/Asset/Part 2/Cloud2 L8.png"/>
+        <img class="Cloud3" src="Images/Asset/Part 2/Cloud3 L8.png"/>
+        <img class="Cloud4" src="Images/Asset/Part 2/Cloud4 L8.png"/>
+        <img class="L1Map" src="Images/Asset/Part 2/P2 L1 Map.png"/>
+        <img class="L5Map" src="Images/Asset/Part 2/P2 L5 Map.png"/>
+        <img class="Milwind" src="Images/Asset/Part 2/Milwind L7.png">
+        <img class="Fans" src="Images/Asset/Part 2/Fans L6.png">
+        <img class="Hole" src="Images/Asset/Part 2/Hole.png">
+
+        <!-- Interactive NPCs -->
+        <img class="NPC Dandelion" id="dandelion" src="Images/Asset/Part 2/character/Dadelion L4.png">
+        <img class="NPC Iguana" id="iguana" src="Images/Asset/Part 2/character/Iguana L2.png">
+        <img class="NPC Mole" id="mole" src="Images/Asset/Part 2/character/Mole L4.png">
+
+        <canvas id="debugCanvas"></canvas>
+    </div>
+
+    <script>
+        const GAME_WIDTH = 1920;
+        const GAME_HEIGHT = 1080;
+
+        const frame = document.getElementById("mapFrame");
+        const playerElem = document.getElementById("player");
+        const canvas = document.getElementById("debugCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const dandelionElem = document.getElementById("dandelion");
+        const iguanaElem = document.getElementById("iguana");
+        const moleElem = document.getElementById("mole");
+
+        // Scale the entire .Frame div proportionally based on screen size
+        function fitGameToWindow() {
+            const scaleX = window.innerWidth / GAME_WIDTH;
+            const scaleY = window.innerHeight / GAME_HEIGHT;
+            const scale = Math.min(scaleX, scaleY); // Prevents distortion/stretching
+
+            frame.style.transform = `scale(${scale})`;
+        }
+
+        function resizeCanvas() {
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+        }
+        
+        window.addEventListener("resize", () => {
+            fitGameToWindow();
+            resizeCanvas();
+        });
+
+        // Initialize Scaling
+        fitGameToWindow();
+        resizeCanvas();
+
+        const PLAYER_WIDTH = 350;
+        const PLAYER_HEIGHT = 200;
+        const FEET_OFFSET_X = PLAYER_WIDTH / 2;
+
+        const player = {
+            x: 50,
+            y: 200,
+            velX: 0,
+            velY: 0,
+            speed: 7,
+            gravity: 0.6,
+            jumpForce: -15,
+            isGrounded: false,
+            facingDirection: 1
+        };
+
+        const characterFrames = [
+            "Images/Asset/Part 2/User/User1 L3.png",
+            "Images/Asset/Part 2/User/User2 L3.png",
+            "Images/Asset/Part 2/User/User3 L3.png"
+        ];
+        let currentFrameIndex = 0;
+        let animationTimer = 0;
+        const animationSpeed = 12;
+
+        let activeNearbyNPC = null;
+
+        const pathPoints = [
+            { x: 0.00, y: 0.80 },
+            { x: 0.22, y: 0.85 },
+            { x: 0.32, y: 0.80 },
+            { x: 0.42, y: 0.73 },
+            { x: 0.52, y: 0.65 },
+            { x: 0.65, y: 0.63 },
+            { x: 0.77, y: 0.46 },
+            { x: 0.82, y: 0.38 },
+            { x: 1.00, y: 0.32 }
+        ];
+
+        const keys = {
+            ArrowLeft: false, ArrowRight: false, ArrowUp: false,
+            KeyA: false, KeyD: false, KeyW: false, KeyZ: false, KeyX: false
+        };
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code in keys) keys[e.code] = true;
+
+            if (e.code === "KeyX" && activeNearbyNPC) {
+                window.location.href = activeNearbyNPC.targetUrl;
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.code in keys) keys[e.code] = false;
+        });
+
+        function getGroundYAt(feetX) {
+            const normX = feetX / GAME_WIDTH;
+
+            for (let i = 0; i < pathPoints.length - 1; i++) {
+                const p1 = pathPoints[i];
+                const p2 = pathPoints[i + 1];
+
+                if (normX >= p1.x && normX <= p2.x) {
+                    const t = (normX - p1.x) / (p2.x - p1.x || 1);
+                    const normY = p1.y + t * (p2.y - p1.y);
+                    return normY * GAME_HEIGHT;
+                }
+            }
+            return GAME_HEIGHT;
+        }
+
+        function checkNPCProximity() {
+            const PROXIMITY_DISTANCE = 300; 
+
+            const playerCenterX = player.x + FEET_OFFSET_X;
+            const playerCenterY = player.y + (PLAYER_HEIGHT / 2);
+
+            const npcs = [
+                {
+                    name: "dandelion",
+                    element: dandelionElem,
+                    defaultSrc: "Images/Asset/Part 2/character/Dadelion L4.png",
+                    nearSrc: "Images/Asset/Part 2/character/Active Dadelion L4.png",
+                    targetUrl: "dandelion.html"
+                },
+                {
+                    name: "mole",
+                    element: moleElem,
+                    defaultSrc: "Images/Asset/Part 2/character/Mole L4.png",
+                    nearSrc: "Images/Asset/Part 2/character/Active Mole L4.png",
+                    targetUrl: "mole.html"
+                },
+                {
+                    name: "iguana",
+                    element: iguanaElem,
+                    defaultSrc: "Images/Asset/Part 2/character/Iguana L2.png",
+                    nearSrc: "Images/Asset/Part 2/character/Active Iguana L2.png",
+                    targetUrl: "iguana.html"
+                }
+            ];
+
+            let foundNearby = false;
+
+            npcs.forEach(npc => {
+                const frameRect = frame.getBoundingClientRect();
+                const rect = npc.element.getBoundingClientRect();
+                
+                // Get coordinates relative to the 1920x1080 canvas rather than window screen space
+                const scale = frameRect.width / GAME_WIDTH;
+                const npcCenterX = (rect.left - frameRect.left + (rect.width / 2)) / scale;
+                const npcCenterY = (rect.top - frameRect.top + (rect.height / 2)) / scale;
+
+                const dx = playerCenterX - npcCenterX;
+                const dy = playerCenterY - npcCenterY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance <= PROXIMITY_DISTANCE) {
+                    npc.element.src = npc.nearSrc;
+                    activeNearbyNPC = npc;
+                    foundNearby = true;
+                } else {
+                    npc.element.src = npc.defaultSrc;
+                }
+            });
+
+            if (!foundNearby) {
+                activeNearbyNPC = null;
+            }
+        }
+
+        function gameLoop() {
+            if (keys.ArrowLeft || keys.KeyA) {
+                player.velX = -player.speed;
+                player.facingDirection = -1;
+            } else if (keys.ArrowRight || keys.KeyD) {
+                player.velX = player.speed;
+                player.facingDirection = 1;
+            } else {
+                player.velX = 0;
+            }
+
+            if ((keys.ArrowUp || keys.KeyW || keys.KeyZ) && player.isGrounded) {
+                player.velY = player.jumpForce;
+                player.isGrounded = false;
+            }
+
+            player.velY += player.gravity;
+
+            player.x += player.velX;
+            player.y += player.velY;
+
+            if (player.x < -FEET_OFFSET_X + 20) player.x = -FEET_OFFSET_X + 20;
+            if (player.x > GAME_WIDTH - FEET_OFFSET_X - 20) player.x = GAME_WIDTH - FEET_OFFSET_X - 20;
+
+            const feetX = player.x + FEET_OFFSET_X;
+            const targetGroundY = getGroundYAt(feetX) - PLAYER_HEIGHT;
+
+            if (player.y >= targetGroundY) {
+                player.y = targetGroundY;
+                player.velY = 0;
+                player.isGrounded = true;
+            } else {
+                player.isGrounded = false;
+            }
+
+            animationTimer++;
+            if (animationTimer >= animationSpeed) {
+                animationTimer = 0;
+                currentFrameIndex = (currentFrameIndex + 1) % characterFrames.length;
+                playerElem.src = characterFrames[currentFrameIndex];
+            }
+
+            playerElem.style.transform = `translate(${player.x}px, ${player.y}px) scaleX(${player.facingDirection})`;
+
+            checkNPCProximity();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
