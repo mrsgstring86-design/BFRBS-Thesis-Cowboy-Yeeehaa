@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>In-Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+        }
+
+        /* Parent Container: Fullscreen Black Letterbox */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: #000000;
+            overflow: hidden;
+        }
+
+        /* Fixed Internal Game Resolution Box with Orange Background */
+        .Frame {
+            position: absolute;
+            width: 1950px;
+            height: 1330px;
+            background-color: #e55420;
+            overflow: hidden;
+            transform-origin: center center;
+        }
+
+        .Bg { z-index: -9; }
+
+        /* Sprite Character Styling */
+        .character {
+            position: absolute;
+            width: 500px;
+            z-index: -3;
+            left: 0;
+            top: 0;
+            will-change: transform;
+        }
+
+        .Dandelion {
+            left: 1400px;
+            position: absolute;
+            bottom: 200px;
+            z-index: -4;
+            width: 450px;
+        }
+
+        .Bg, .Clouds, .Choices {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            object-fit: cover;
+        }
+        .Choices{
+            z-index: 1;
+        }
+
+        .Bg {
+            top: 370px;
+        }
+        .Clouds {
+            top: -20%;
+            animation: clouds 3s linear infinite;
+        }
+        @keyframes clouds {
+            0%, 25% {
+                transform: translate(0, 0);
+            }
+            50%, 65% {
+                transform: translate(0px, 5px);
+            }
+            90%, 100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        /* INVISIBLE SIGN TARGET HITBOXES */
+        .sign-target {
+            position: absolute;
+            left: 550px;       /* Aligned over center wooden sign post */
+            width: 950px;      /* Width covering sign boards */
+            height: 250px;     /* Height per sign board */
+            z-index: 5;
+            background-color: transparent;
+        }
+
+        .sign-target.top    { top: 110px; }
+        .sign-target.middle { top: 420px; }
+        .sign-target.bottom { top: 730px; }
+
+        /* Boomerang Projectile Styling */
+        .boomerang {
+            position: absolute;
+            width: 100px;
+            z-index: 6;
+            display: none;
+            will-change: transform;
+        }
+
+        /* GAME OVER / WIN OVERLAYS */
+        .game-status-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px #000000;
+        }
+
+        .game-status-overlay h1 {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .game-status-overlay p {
+            font-size: 36px;
+            margin: 10px 0;
+        }
+
+        #debugCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="Frame" id="mapFrame">
+        <img class="character" id="player" src="Images/Asset/Part 2/User/User1 L3.png" alt="Player" />
+        <img class="Bg" src="Images/Asset/Quiz Part/Quix Bg.png"/>
+        <img class="Choices" id="choicesImg" src="Images/Asset/Quiz Part/Choices/choice1.png">
+        
+        <!-- INVISIBLE SIGN HITBOX PARTS -->
+        <div class="sign-target top" data-sign="1"></div>
+        <div class="sign-target middle" data-sign="2"></div>
+        <div class="sign-target bottom" data-sign="3"></div>
+
+        <div class="ColorBg">
+            <img class="Clouds" src="Images/Asset/Quiz Part/Quiz Cloud.png">
+            <img class="NPC Dandelion" id="dandelion" src="Images/Asset/Part 2/character/Dadelion L4.png">
+            
+            <!-- Boomerang Sprite -->
+            <img class="boomerang" id="boomerang" src="Images/Asset/Quiz Part/Boomerang.png" alt="Boomerang" />
+
+            <canvas id="debugCanvas"></canvas>
+        </div>
+
+        <!-- GameOver UI Overlay -->
+        <div class="game-status-overlay" id="gameOverOverlay">
+            <h1>GAME OVER</h1>
+            <p>Press <strong>X</strong> to Restart</p>
+        </div>
+
+        <!-- Win UI Overlay -->
+        <div class="game-status-overlay" id="winOverlay">
+            <h1>YOU WIN!</h1>
+            <p>Press <strong>Z</strong> to Talk to another worker</p>
+            <p>Press <strong>X</strong> to Proceed to End Game</p>
+        </div>
+    </div>
+
+    <script>
+        const GAME_WIDTH = 1920;
+        const GAME_HEIGHT = 1080;
+
+        const frame = document.getElementById("mapFrame");
+        const playerElem = document.getElementById("player");
+        const boomerangElem = document.getElementById("boomerang");
+        const choicesElem = document.getElementById("choicesImg");
+        const canvas = document.getElementById("debugCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const dandelionElem = document.getElementById("dandelion");
+        const gameOverOverlay = document.getElementById("gameOverOverlay");
+        const winOverlay = document.getElementById("winOverlay");
+
+        // Step index: 1 = Choice 1, 2 = Choice 2, 3 = Choice 3
+        let currentQuestion = 1;
+
+        // Correct sign required for each question step
+        // Q1 -> Sign 2 (Middle)
+        // Q2 -> Sign 1 (Top)
+        // Q3 -> Sign 3 (Bottom)
+        const correctAnswers = {
+            1: 2,
+            2: 1,
+            3: 3
+        };
+
+        // Game State Flags
+        let isGameOver = false;
+        let isWin = false;
+
+        function fitGameToWindow() {
+            const scaleX = window.innerWidth / GAME_WIDTH;
+            const scaleY = window.innerHeight / GAME_HEIGHT;
+            const scale = Math.min(scaleX, scaleY);
+
+            frame.style.transform = `scale(${scale})`;
+        }
+
+        function resizeCanvas() {
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+        }
+        
+        window.addEventListener("resize", () => {
+            fitGameToWindow();
+            resizeCanvas();
+        });
+
+        fitGameToWindow();
+        resizeCanvas();
+
+        const PLAYER_WIDTH = 350;
+        const PLAYER_HEIGHT = 200;
+        const FEET_OFFSET_X = PLAYER_WIDTH / 2;
+
+        const player = {
+            x: 50,
+            y: 200,
+            velX: 0,
+            velY: 0,
+            speed: 7,
+            gravity: 0.6,
+            jumpForce: -25,
+            isGrounded: false,
+            Jumped: 0,
+            maxJumps: 2,
+            facingDirection: 1,
+            canThrow: true
+        };
+
+        const boomerang = {
+            x: 0,
+            y: 0,
+            velX: 0,
+            speed: 18,
+            active: false,
+            rotation: 0,
+            timer: 0,
+            returnDelay: 85,
+            maxLifetime: 170, // Total flight duration (Outbound + Return)
+            hasHitSign: false,
+            width: 100,
+            height: 100
+        };
+
+        const characterFrames = [
+            "Images/Asset/Part 2/User/User1 L3.png",
+            "Images/Asset/Part 2/User/User2 L3.png",
+            "Images/Asset/Part 2/User/User3 L3.png"
+        ];
+        let currentFrameIndex = 0;
+        let animationTimer = 0;
+        const animationSpeed = 12;
+
+        const pathPoints = [
+            { x: 0.00, y: 1 },
+            { x: 1.00, y: 1 }
+        ];
+
+        const keys = {
+            ArrowUp: false, KeyW: false, KeyZ: false, KeyX: false
+        };
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code in keys) keys[e.code] = true;
+
+            if (isGameOver) {
+                if (e.code === "KeyX") {
+                    restartGame();
+                }
+                return;
+            }
+
+            if (isWin) {
+                if (e.code === "KeyZ") {
+                    window.location.href = 'map.html';
+                } else if (e.code === "KeyX") {
+                    window.location.href = 'end game.html';
+                }
+                return;
+            }
+
+            if ((e.code === "ArrowUp" || e.code === "KeyW" || e.code === "KeyZ") && !e.repeat) {
+                if (player.Jumped < player.maxJumps) {
+                    player.velY = player.jumpForce;
+                    player.isGrounded = false;
+                    player.Jumped++;
+                }
+            }
+
+            if (e.code === "KeyX" && !e.repeat) {
+                throwBoomerang();
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.code in keys) keys[e.code] = false;
+
+            if (e.code === "ArrowUp" || e.code === "KeyW" || e.code === "KeyZ") {
+                if (player.velY < 0) {
+                    player.velY = 0;
+                }
+            }
+        });
+
+        function throwBoomerang() {
+            if (!player.canThrow || boomerang.active || isGameOver || isWin) return;
+
+            boomerang.active = true;
+            boomerang.hasHitSign = false;
+            player.canThrow = false;
+            boomerang.timer = 0;
+            boomerang.rotation = 0;
+
+            boomerang.x = player.x + FEET_OFFSET_X - (boomerang.width / 2);
+            boomerang.y = player.y + (PLAYER_HEIGHT / 2);
+
+            boomerang.velX = player.facingDirection * boomerang.speed;
+            boomerangElem.style.display = "block";
+        }
+
+        function checkSignHits() {
+            if (boomerang.hasHitSign || !boomerang.active) return;
+
+            const boomerangHitbox = {
+                x: boomerang.x,
+                y: boomerang.y,
+                width: boomerang.width,
+                height: boomerang.height
+            };
+
+            const signTargets = document.querySelectorAll('.sign-target');
+
+            signTargets.forEach(sign => {
+                const rect = {
+                    x: sign.offsetLeft,
+                    y: sign.offsetTop,
+                    width: sign.offsetWidth,
+                    height: sign.offsetHeight
+                };
+
+                if (isColliding(boomerangHitbox, rect)) {
+                    boomerang.hasHitSign = true;
+
+                    const hitSignId = parseInt(sign.getAttribute("data-sign"));
+                    const isCorrect = hitSignId === correctAnswers[currentQuestion];
+
+                    choicesElem.src = "Images/Asset/Quiz Part/Choices/Active choice.png";
+
+                    setTimeout(() => {
+                        if (isCorrect) {
+                            if (currentQuestion < 3) {
+                                currentQuestion++;
+                                choicesElem.src = `Images/Asset/Quiz Part/Choices/Choice${currentQuestion}.png`;
+                            } else {
+                                triggerWin();
+                            }
+                        } else {
+                            triggerGameOver();
+                        }
+                    }, 1000);
+                }
+            });
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            gameOverOverlay.style.display = "flex";
+        }
+
+        function triggerWin() {
+            isWin = true;
+            winOverlay.style.display = "flex";
+        }
+
+        function restartGame() {
+            isGameOver = false;
+            isWin = false;
+            currentQuestion = 1;
+            player.x = 50;
+            player.y = 200;
+            player.velX = 0;
+            player.velY = 0;
+            player.canThrow = true;
+            boomerang.active = false;
+            boomerangElem.style.display = "none";
+            choicesElem.src = "Images/Asset/Quiz Part/Choices/choice1.png";
+            gameOverOverlay.style.display = "none";
+            winOverlay.style.display = "none";
+        }
+
+        function updateBoomerang() {
+            if (!boomerang.active) return;
+
+            boomerang.timer++;
+
+            if (boomerang.timer === boomerang.returnDelay) {
+                boomerang.velX = -boomerang.velX;
+            }
+
+            boomerang.x += boomerang.velX;
+            boomerang.rotation += 25;
+
+            boomerangElem.style.transform = `translate(${boomerang.x}px, ${boomerang.y}px) rotate(${boomerang.rotation}deg)`;
+
+            checkSignHits();
+
+            const playerHitbox = {
+                x: player.x,
+                y: player.y,
+                width: PLAYER_WIDTH,
+                height: PLAYER_HEIGHT
+            };
+
+            const boomerangHitbox = {
+                x: boomerang.x,
+                y: boomerang.y,
+                width: boomerang.width,
+                height: boomerang.height
+            };
+
+            // Check if player catches the boomerang during return flight
+            if (boomerang.timer > boomerang.returnDelay && isColliding(playerHitbox, boomerangHitbox)) {
+                catchBoomerang();
+                return;
+            }
+
+            // Game Over trigger if player misses catching the boomerang before lifetime expires
+            if (boomerang.timer >= boomerang.maxLifetime) {
+                boomerang.active = false;
+                boomerangElem.style.display = "none";
+                triggerGameOver();
+            }
+        }
+
+        function catchBoomerang() {
+            boomerang.active = false;
+            player.canThrow = true;
+            boomerangElem.style.display = "none";
+        }
+
+        function isColliding(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
+        }
+
+        function getGroundYAt(feetX) {
+            const normX = feetX / GAME_WIDTH;
+
+            for (let i = 0; i < pathPoints.length - 1; i++) {
+                const p1 = pathPoints[i];
+                const p2 = pathPoints[i + 1];
+
+                if (normX >= p1.x && normX <= p2.x) {
+                    const t = (normX - p1.x) / (p2.x - p1.x || 1);
+                    const normY = p1.y + t * (p2.y - p1.y);
+                    return normY * GAME_HEIGHT;
+                }
+            }
+            return GAME_HEIGHT;
+        }
+
+        function gameLoop() {
+            if (!isGameOver && !isWin) {
+                player.velX = 0;
+                player.velY += player.gravity;
+
+                player.x += player.velX;
+                player.y += player.velY;
+
+                if (player.x < -FEET_OFFSET_X + 20) player.x = -FEET_OFFSET_X + 20;
+                if (player.x > GAME_WIDTH - FEET_OFFSET_X - 20) player.x = GAME_WIDTH - FEET_OFFSET_X - 20;
+
+                const feetX = player.x + FEET_OFFSET_X;
+                const targetGroundY = getGroundYAt(feetX) - PLAYER_HEIGHT;
+
+                if (player.y >= targetGroundY) {
+                    player.y = targetGroundY;
+                    player.velY = 0;
+                    player.isGrounded = true;
+                    player.Jumped = 0;
+                } else {
+                    player.isGrounded = false;
+                }
+
+                updateBoomerang();
+
+                animationTimer++;
+                if (animationTimer >= animationSpeed) {
+                    animationTimer = 0;
+                    currentFrameIndex = (currentFrameIndex + 1) % characterFrames.length;
+                    playerElem.src = characterFrames[currentFrameIndex];
+                }
+
+                playerElem.style.transform = `translate(${player.x}px, ${player.y}px) scaleX(${player.facingDirection})`;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
