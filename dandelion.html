@@ -360,7 +360,7 @@
         <audio class="eagleSFX" src="Assets/Sounds/Caw.mp3"></audio>
         <img class="character" id="player" src="Assets/Images/Part 2/User/User1 L3.png" alt="Player" />
         <img class="Bg" src="Assets/Images/Quiz Part/Quiz Bg.png"/>
-        <img class="Choices" id="choicesImg" src="Assets/Images/Quiz Part/Choices/Choice1.png">
+        <img class="Choices" id="ChoicesImg" src="Assets/Images/Quiz Part/Choices/Choice1.png">
 
         <div class="sign-target top" data-sign="1"></div>
         <div class="sign-target middle" data-sign="2"></div>
@@ -391,7 +391,7 @@
             <img class="EndChoice-Character" src="Assets/Images/Quiz Part/EndCharacter/End Dandelion.png">
             <img class="EndChoice-A" src="Assets/Images/Quiz Part/EndCharacter/End A.png">
             <img class="EndChoice-D" src="Assets/Images/Quiz Part/EndCharacter/End D.png">
-            <img class="EndChoice-Base" src="Assets/Images/Quiz Part/EndCharacter/End choice.png">
+            <img class="EndChoice-Base" src="Assets/Images/Quiz Part/EndCharacter/End Choice.png">
         </div>
     </div>
 
@@ -402,7 +402,7 @@
         const frame = document.getElementById("mapFrame");
         const playerElem = document.getElementById("player");
         const boomerangElem = document.getElementById("boomerang");
-        const choicesElem = document.getElementById("choicesImg");
+        const ChoicesElem = document.getElementById("ChoicesImg");
         const answerKeyElem = document.getElementById("answerKeyImg");
         const dandelionDialogueElem = document.getElementById("dandelionDialogue");
         const npcUpElem = document.getElementById('npcUp');
@@ -683,11 +683,11 @@
                         setDandelionDialogue(3);
                     } else if (currentDialogueIndex === 1) {
                         currentQuestion = 2;
-                        choicesElem.src = `Assets/Images/Quiz Part/Choices/Choice${currentQuestion}.png`;
+                        ChoicesElem.src = `Assets/Images/Quiz Part/Choices/Choice${currentQuestion}.png`;
                         hideDialogue(() => resetBoomerang());
                     } else if (currentDialogueIndex === 3) {
                         currentQuestion = 3;
-                        choicesElem.src = `Assets/Images/Quiz Part/Choices/Choice${currentQuestion}.png`;
+                        ChoicesElem.src = `Assets/Images/Quiz Part/Choices/Choice${currentQuestion}.png`;
                         hideDialogue(() => resetBoomerang());
                     } else if (currentDialogueIndex === 4) {
                         hideDialogue(() => triggerWin());
@@ -907,7 +907,7 @@
                     const hitSignId = parseInt(sign.getAttribute("data-sign"));
                     const isCorrect = hitSignId === correctAnswers[currentQuestion];
 
-                    choicesElem.src = "Assets/Images/Quiz Part/Choices/Active choice.png";
+                    ChoicesElem.src = "Assets/Images/Quiz Part/Choices/Active Choice.png";
 
                     if (isCorrect) {
                         triggerScreenShake();
@@ -969,10 +969,10 @@
 
             if (currentQuestion == 3) {
                 currentQuestion = 2;
-                choicesElem.src = `Assets/Images/Quiz Part/Choices/choice2.png`;
+                ChoicesElem.src = `Assets/Images/Quiz Part/Choices/Choice2.png`;
             } else {
                 currentQuestion = 1;
-                choicesElem.src = `Assets/Images/Quiz Part/Choices/choice1.png`;
+                ChoicesElem.src = `Assets/Images/Quiz Part/Choices/Choice1.png`;
             }
             HittedBird = false;
             player.x = 50;
