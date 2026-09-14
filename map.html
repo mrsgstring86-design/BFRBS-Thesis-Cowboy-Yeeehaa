@@ -33,6 +33,38 @@
             box-sizing: border-box;
         }
 
+        /* --- BACK TO INDEX BUTTON STYLES --- */
+        .back-home-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            z-index: 100;
+            padding: 12px 28px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 3px solid #ffffff;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease-in-out;
+            text-decoration: none;
+            display: inline-block;
+            user-select: none;
+        }
+
+        .back-home-btn:hover {
+            background-color: #ff7300;
+            color: #000000;
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(255, 255, 255, 0.4);
+        }
+
+        .back-home-btn:active {
+            transform: scale(0.95);
+        }
+
         .L1Map, .L5Map, .Milwind, .Bg, .Cloud1, .Cloud2, .Cloud3, .Cloud4 {
             position: absolute;
             top: 0;
@@ -153,11 +185,14 @@
 <body>
 
     <div class="Frame" id="mapFrame">
+        <!-- Top Right Return Button -->
+        <button class="back-home-btn" onclick="window.location.href='pressbutton.html'">🏠 Restart</button>
+
         <audio class="jd" src="Assets/Sounds/Ja Da.mp3" loop></audio>
         <img class="character" id="player" src="Assets/Images/Part 2/User/User1 L3.png" alt="Player" />
         
         <!-- Background Elements -->
-         <img class="guid" src="Assets/Images/guid map.png">
+        <img class="guid" src="Assets/Images/guid map.png">
         <img class="Bg" src="Assets/Images/Part 2/Bg L9.png"/>
         <img class="Cloud1" src="Assets/Images/Part 2/Cloud L8.png"/>
         <img class="Cloud2" src="Assets/Images/Part 2/Cloud2 L8.png"/>
@@ -197,23 +232,23 @@
 
         const jdsfx = document.querySelector(".jd");
         function playBackgroundMusic() {
-                if (jdsfx) {
-                    const playPromise = jdsfx.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(() => {
-                            // If blocked by browser autoplay policy, retry on user interaction
-                            const enableAudio = () => {
-                                jdsfx.play();
-                                window.removeEventListener("click", enableAudio);
-                                window.removeEventListener("keydown", enableAudio);
-                            };
-                            window.addEventListener("click", enableAudio);
-                            window.addEventListener("keydown", enableAudio);
-                        });
-                    }
+            if (jdsfx) {
+                const playPromise = jdsfx.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        // If blocked by browser autoplay policy, retry on user interaction
+                        const enableAudio = () => {
+                            jdsfx.play();
+                            window.removeEventListener("click", enableAudio);
+                            window.removeEventListener("keydown", enableAudio);
+                        };
+                        window.addEventListener("click", enableAudio);
+                        window.addEventListener("keydown", enableAudio);
+                    });
                 }
             }
-            playBackgroundMusic();
+        }
+        playBackgroundMusic();
 
         function fitGameToWindow() {
             const scaleX = window.innerWidth / GAME_WIDTH;
