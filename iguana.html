@@ -667,16 +667,15 @@
                         choicesElem.src = `Assets/Images/Quiz Part/Iguana Dialogue/Ichoice${currentQuestion}.png`;
                         hideDialogue(() => resetBoomerang());
                     } else if (currentDialogueIndex === 2) {
-                        // After Dialogue 2 -> Advance to Dialogue 3
-                        setDandelionDialogue(3);
+                        // After Dialogue 2 -> Set up Question 3 & return to gameplay
+                       setDandelionDialogue(3);
                     } else if (currentDialogueIndex === 3) {
-                        // After Dialogue 3 -> Set up Question 3 & return to gameplay
+                        // After Dialogue 3 -> Advance to Dialogue 4
+                        setDandelionDialogue(4);
+                    } else {
                         currentQuestion = 3;
                         choicesElem.src = `Assets/Images/Quiz Part/Iguana Dialogue/Ichoice${currentQuestion}.png`;
                         hideDialogue(() => resetBoomerang());
-                    } else if (currentDialogueIndex === 4) {
-                        // After Dialogue 4 (triggered by correct Choice 3) -> Close dialogue & trigger Win screen
-                        hideDialogue(() => triggerWin());
                     }
                 }
                 return;
@@ -906,11 +905,11 @@
                         highlightCorrectSign(sign);
                         spawnYellowParticles(rect);
 
-                        // Question 1 -> Dialogue 1
-                        // Question 2 -> Dialogue 2
-                        // Question 3 -> Dialogue 4 (I Dialogue4.png)
-                        const dialogueIndex = (currentQuestion === 3) ? 4 : currentQuestion;
-                        setDandelionDialogue(dialogueIndex);
+                        if (currentQuestion != 3) {
+                            setDandelionDialogue(currentQuestion);
+                        } else {
+                            triggerWin();
+                        }
                     } else {
                         hideDialogue(() => triggerGameOver());
                     }
